@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../MavLinkListMessages"
+		},
+		{
+			"name": "MAV_Commander",
+			"path": "."
+		}
+	]
+}

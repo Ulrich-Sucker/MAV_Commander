@@ -13,10 +13,13 @@
     -------------------------------------------------------------------------
     Version 1.1:
     * Schalten von 4 Sonderfunktionen auf 4 RC-Kanälen
+    
+    Version 1.2:
+    * Auswertung des Heard-Beat 
 
  * ========================================================================== */
 #define DEBUGGING
-#define SW_Version "00.00.003"
+#define SW_Version "00.00.005"
 
 /* =========================================================================== */
 /* -------------------------- Basis Libs einbinden --------------------------- */
@@ -72,16 +75,20 @@ unsigned long request_intervall  = 300000;
 uint8_t target_system    = 1;
 uint8_t target_component = 1;
 
+/* ///////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ */
 mavlink_message_t mav_msg;
-uint8_t ArmedStatusOld = 2;
-uint8_t ArmedStatusNew = 2;
+
+uint8_t armed_status_old =  2;
+uint8_t armed_status_new =  2;
+uint8_t flight_mode_old  = 99;
+uint8_t flight_mode_new  =  1;
 
 /* ========================================================================== */
 //      Funktionsprototypen
 /* ========================================================================== */
 void dispatch_MavMessage();
 void display_DroneStatusOnLcd();
-void display_DroneMessagesOnLcd(mavlink_message_t* mav_msg);
+void display_DroneMessagesOnLcd();
 
 /* ========================================================================== */
 //      Objekte definieren
@@ -172,6 +179,10 @@ void dispatch_MavMessage(){
       switch (mav_msg.msgid) {
         case MAVLINK_MSG_ID_HEARTBEAT:
           display_DroneStatusOnLcd(); 
+          break;
+        case MAVLINK_MSG_ID_STATUSTEXT:
+          display_DroneMessagesOnLcd(); 
+          break;
       }
     }
   }
@@ -190,96 +201,104 @@ void display_DroneStatusOnLcd(){
   /* ------------------------------------------------------------------------- *
         Anzeige auf LCD 1: Armed oder Disarmed
    * ------------------------------------------------------------------------- */
-  heard_beat.base_mode == 209 ? ArmedStatusNew = 1 : ArmedStatusNew = 0;
-  if ((ArmedStatusNew == 1) && (ArmedStatusOld != 1)){
+  heard_beat.base_mode == 209 ? armed_status_new = 1 : armed_status_new = 0;
+  if ((armed_status_new == 1) && (armed_status_old != 1)){
     lcd1.setCursor(0, 0);
     lcd1.print("---- ARMED  ----");
-    ArmedStatusOld = 1;
+    armed_status_old = 1;
   }
-  if ((ArmedStatusNew == 0) && (ArmedStatusOld != 0)){
+  if ((armed_status_new == 0) && (armed_status_old != 0)){
     lcd1.setCursor(0, 0);
     lcd1.print("----DISARMED----");
-    ArmedStatusOld = 0;
+    armed_status_old = 0;
   }
 
-  //Serial.print("State        : "); Serial.println(heard_beat.base_mode == 209 ? "Armed" : "Disarmed");
-  Serial.print("Mode         : ");
+  /* ------------------------------------------------------------------------- *
+        Anzeige auf LCD 1: Flight Mode
+   * ------------------------------------------------------------------------- */
+  flight_mode_new = heard_beat.custom_mode;
   
-  switch(heard_beat.custom_mode) {
-    case 0:
-      Serial.println("Manual");
-    break;
-    case 1:
-      Serial.println("Circle");
-    break;
-    case 2:
-      Serial.println("Stabilize");
-    break;
-    case 3:
-      Serial.println("Training");
-    break;
-    case 5:
-      Serial.println("FBWA");
-    break;
-    case 6:
-      Serial.println("FBWB");
-    break;
-    case 7:
-      Serial.println("Cruise");
-    break;
-    case 8:
-      Serial.println("AUTOTUNE");
-    break;
-    case 10:
-      Serial.println("Auto");
-    break;
-    case 11:
-      Serial.println("RTL");
-    break;
-    case 12:
-      Serial.println("Loiter");
-    break;
-    case 13:
-      Serial.println("Take Off");
-    break;
-    case 14:
-      Serial.println("Avoid ADSB");
-    break;
-    case 15:
-      Serial.println("Guided");
-    break;
-    case 17:
-      Serial.println("QStabilize");
-    break;
-    case 18:
-      Serial.println("QHover");
-    break;
-    case 19:
-      Serial.println("QLoiter");
-    break;
-    case 20:
-      Serial.println("QLand");
-    break;
-    case 21:
-      Serial.println("QRTL");
-    break;
-    case 22:
-      Serial.println("QAutoTune");
-    break;
-    case 23:
-      Serial.println("QAcro");
-    break;
-    case 24:
-      Serial.println("Thermal");
-    break;
-    case 25:
-      Serial.println("Loiter to QLand");
-    break;
-    default:
-      Serial.print("Mode "); Serial.print(heard_beat.custom_mode); Serial.println(" not known");
-    break;
-  }
+  if (flight_mode_old != flight_mode_new) {
+    flight_mode_old = flight_mode_new;
 
+    lcd1.setCursor(0, 1);
+    lcd1.print("Mode: ");
+    
+    switch(heard_beat.custom_mode) {
+      case 0:
+        lcd1.print("Manual    ");
+      break;
+      case 1:
+        lcd1.print("Circle    ");
+      break;
+      case 2:
+        lcd1.print("Stabilize ");
+      break;
+      case 3:
+        lcd1.print("Training  ");
+      break;
+      case 5:
+        lcd1.print("FBWA      ");
+      break;
+      case 6:
+        lcd1.print("FBWB      ");
+      break;
+      case 7:
+        lcd1.print("Cruise    ");
+      break;
+      case 8:
+        lcd1.print("AUTOTUNE  ");
+      break;
+      case 10:
+        lcd1.print("Auto      ");
+      break;
+      case 11:
+        lcd1.print("RTL       ");
+      break;
+      case 12:
+        lcd1.print("Loiter    ");
+      break;
+      case 13:
+        lcd1.print("Take Off  ");
+      break;
+      case 14:
+        lcd1.print("Avoid ADSB");
+      break;
+      case 15:
+        lcd1.print("Guided    ");
+      break;
+      case 17:
+        lcd1.print("QStabilize");
+      break;
+      case 18:
+        lcd1.print("QHover    ");
+      break;
+      case 19:
+        lcd1.print("QLoiter   ");
+      break;
+      case 20:
+        lcd1.print("QLand     ");
+      break;
+      case 21:
+        lcd1.print("QRTL      ");
+      break;
+      case 22:
+        lcd1.print("QAutoTune ");
+      break;
+      case 23:
+        lcd1.print("QAcro     ");
+      break;
+      case 24:
+        lcd1.print("Thermal   ");
+      break;
+      case 25:
+        lcd1.print("Loit2 QLand");
+      break;
+      default:
+        lcd1.print(heard_beat.custom_mode);
+      break;
+    }
+  }
 }
 
 
@@ -288,6 +307,40 @@ void display_DroneStatusOnLcd(){
  * --------------------------------------------------------------------------- *
 
  * =========================================================================== */
-void display_DroneMessagesOnLcd(mavlink_message_t* mav_msg){
+void display_DroneMessagesOnLcd(){
+  char mavlink_message_text[50];
+  char display_message_text[20];
+  char c;
+  int counter;
+  Serial.println("#253  STATUSTEXT");
+  mavlink_msg_statustext_get_text(&mav_msg, mavlink_message_text);
+ 
+  for (size_t i = 0; i < 20; i++)
+  {
+    c = mavlink_message_text[i];
+    if (c != '\0') {
+      display_message_text[i] = c;
+      counter = i;
+      lcd2.print(c);
+      Serial.print(c);
+    }
+    else {
+      display_message_text[i] = c;
+      //lcd2.print('\r');
+      lcd2.println();
+      Serial.println();
+      break;
+    }
+    //lcd2.print(display_message_text);
+  }
+  
+  // lcd2.println(display_message_text);
+  
+
+  Serial.print("mavlink: ");
+  Serial.println(mavlink_message_text);
+  //Serial.print("display: ");
+  //Serial.println(display_message_text);
+  Serial.println(counter);
 
 }
